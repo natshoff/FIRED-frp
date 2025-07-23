@@ -123,7 +123,7 @@ def aggregate_frp_global(detections, grid):
     # Calculate FRP per area for aggregation
     overlay['frp_fr'] = overlay['frp'] / overlay['pix_area']
     
-    # Main aggregation with sophisticated statistics
+    # Main aggregation with statistics
     aggregated = overlay.groupby('grid_index').agg(
         afd_count=('obs_id', 'count'),
         frp_csum=('frp_fr', 'sum'),
@@ -167,6 +167,9 @@ def aggregate_frp_global(detections, grid):
     # Calculate additional metrics
     aggregated['day_count'] = aggregated.get('frp_count_day', pd.Series([0]*len(aggregated))).fillna(0)
     aggregated['night_count'] = aggregated.get('frp_count_night', pd.Series([0]*len(aggregated))).fillna(0)
+    
+    # Calculate observation duration in days
+    aggregated['obs_duration'] = (aggregated['last_obs_date'] - aggregated['first_obs_date']).dt.days
     
     # Find day of maximum FRP
     max_frp_dates = overlay.loc[overlay.groupby('grid_index')['frp_fr'].idxmax()]
