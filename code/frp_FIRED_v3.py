@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-FRP Code Workflow Script (Optimized Version)
+FRP Code Workflow Script
 
 Purpose:
 Calculate cumulative fire radiative power (cumFRP in W/Km^2) from an active fire detection 
