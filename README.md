@@ -1,6 +1,6 @@
 # Fire Radiative Power (FRP) Analysis Workflow
 
-A comprehensive Python workflow for analyzing cumulative Fire Radiative Power (cFRP) patterns across the western US using VIIRS active fire detections and FIREDpy fire perimeter data.
+A Python workflow for analyzing cumulative Fire Radiative Power (cFRP) patterns across the western US using VIIRS active fire detections and FIREDpy fire perimeter data.
 
 ## Overview
 
@@ -8,8 +8,6 @@ This workflow combines VIIRS (Visible Infrared Imaging Radiometer Suite) active 
 
 ## Key Features
 
-- **Multi-scale Analysis**: Spatial aggregation from 375m pixels to ecoregion-level statistics
-- **Temporal Pattern Detection**: Monthly, seasonal, and interannual trend analysis
 - **FRP Metrics**: Cumulative FRP, percentiles (90th, 95th, 97th, 99th), day/night breakdowns
 - **Parallel Processing**: Optimized for large-scale datasets with configurable parallelization
 - **Ecosystem Analysis**: Ecoregion-specific fire behavior characterization
@@ -67,7 +65,7 @@ Open and run `code/frp_data_exp_v1.ipynb` for comprehensive data exploration and
 3. **Active Fire Detection Processing**: Load VIIRS data, filter low confidence detections
 4. **Spatial Integration**: Join fire detections to perimeters with temporal constraints
 5. **Grid Creation**: Generate 375m regular grid for spatial aggregation
-6. **FRP Aggregation**: Calculate sophisticated FRP statistics per grid cell
+6. **FRP Aggregation**: Calculate FRP statistics per grid cell
 7. **Quality Control**: Filter fires with minimum observation thresholds
 
 ### Data Exploration & Analysis
@@ -78,7 +76,7 @@ The Jupyter notebook (`frp_data_exp_v1.ipynb`) provides:
 - **Seasonal Analysis**: Peak fire month identification by ecoregion
 - **Ecoregion Comparison**: Faceted visualizations with fixed scales
 - **Statistical Analysis**: Trend detection with confidence intervals
-- **Spatial Visualization**: Maps with integrated bar charts and state boundaries
+- **Spatial Visualization**: Maps with bar charts and state boundaries
 
 ## Key Outputs
 
@@ -87,7 +85,7 @@ The Jupyter notebook (`frp_data_exp_v1.ipynb`) provides:
 The workflow uses an improved naming scheme: `{aoi}_{fire_dataset}_{data_type}_{date_range}_{processing_step}.{ext}`
 
 1. **Main FRP Gridstats File**: `{aoi}_FIRED_gridstats_{date_range}_final.gpkg`
-   - 375m resolution grid cells with comprehensive FRP statistics
+   - 375m resolution grid cells with FRP statistics
    - Cumulative FRP (frp_csum) in W/km²
    - Percentile metrics (P90, P95, P97, P99)
    - Day/night breakdowns
@@ -131,7 +129,7 @@ aoi_options = {
     'srm': 'data/input/AOI/na_cec_eco_l3_srme.gpkg',
     # Add custom AOIs here
 }
-selected_aoi = 'westUS'  # Change to switch study areas
+selected_aoi = 'westUS'  # Change to switch AOI
 ```
 
 ## Methodology
@@ -163,14 +161,13 @@ cumulative_FRP = Σ(FRP_density) per grid cell
 - Peak period identification and quantification
 
 ### Spatial Analysis
-- Ecoregion maps with integrated monthly bar charts
+- Ecoregion maps with monthly bar charts
 - Peak fire month mapping with discrete color scales
 - State boundary overlays for geographic context
 - Faceted comparisons with fixed scales
 
 ### Multi-panel Displays
 - Combined monthly/yearly/spatial visualization panels
-- Top-performing ecoregion focus analysis
 - Comparative seasonal pattern assessment
 
 ## Performance Characteristics
