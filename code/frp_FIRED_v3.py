@@ -18,7 +18,12 @@ Inputs:
 - Fire Perimeters: FIRED (post-processed 5/11)
 
 Outputs:
-[WIP]
+- Fire perimeters: {aoi}_{fire_dataset}_fires_{date_range}_filtered.gpkg
+- Buffered hulls: {aoi}_{fire_dataset}_fires_{date_range}_buffered.gpkg  
+- AFD points: {aoi}_{fire_dataset}_viirs_{date_range}_points.gpkg
+- AFD pixels: {aoi}_{fire_dataset}_viirs_{date_range}_pixels.gpkg
+- Analysis grid: {aoi}_{fire_dataset}_grid_{date_range}_375m.gpkg
+- **Main output**: {aoi}_{fire_dataset}_gridstats_{date_range}_final.gpkg
 
 Author Acknowledgement:
 Maxwell Cook (maxwell.cook@colorado.edu) created the original workflow and methods for aggregating FRP
@@ -202,7 +207,7 @@ def main():
     }
     
     # Set which AOI to use (change this to switch AOIs)
-    selected_aoi = 'westUS'  # CHANGE HERE
+    selected_aoi = 'srm'  # CHANGE HERE
     
     if selected_aoi not in aoi_options:
         print(f"Error: AOI '{selected_aoi}' not found in aoi_options.")
@@ -292,12 +297,13 @@ def main():
     fp = os.path.join(projdir, 'data/input/firePerimeters/FIRED/fired_conus_ak_2000_to_2025_events_merged.gpkg')
     fires = gpd.read_file(fp)
     print(f"Loaded {len(fires)} fire perimeters")
+    print(f"Fire perimeter columns: {fires.columns.tolist()}")
     
     # Process fire data
     fires['ig_date'] = pd.to_datetime(fires['ig_date'])
     fires['last_date'] = pd.to_datetime(fires['last_date'])
     fires['tot_ar_km2'] = fires['tot_ar_km2'].astype(float)
-    fires = fires[['merge_id', 'tot_ar_km2', 'ig_year', 'ig_date', 'last_date', 'geometry']]
+    fires = fires[['merge_id', 'member_ids', 'tot_ar_km2', 'ig_year', 'ig_date', 'last_date', 'geometry']]
     fires = fires.drop_duplicates(subset='merge_id', keep='first')
     print(f"After processing: {len(fires)} fire perimeters")
     
@@ -316,8 +322,14 @@ def main():
     aoi_union = aoi.geometry.unary_union
     fires_aoi = fires[fires.geometry.intersects(aoi_union)].copy()
     
-    # Export with AOI-specific naming
-    output_filename = f"fires_{aoi_name}_FIRED.gpkg"
+    # Detect date range from fire data for consistent naming
+    fire_min_year = int(fires_aoi['ig_year'].min())
+    fire_max_year = int(fires_aoi['ig_year'].max())
+    date_range = f"{fire_min_year}-{fire_max_year}"
+    print(f"Fire data spans: {date_range}")
+    
+    # Export with improved naming scheme: {aoi}_{fire_dataset}_{data_type}_{date_range}_{processing_step}.{ext}
+    output_filename = f"{aoi_name}_FIRED_fires_{date_range}_filtered.gpkg"
     fires_aoi.to_file(os.path.join(dataFires, output_filename))
     print(f"Filtered fires to {len(fires_aoi)} records that intersect {aoi_name}.")
     print(f"Exported to: {output_filename}")
@@ -330,7 +342,7 @@ def main():
     
     buffer_dist = 3000
     target_crs_for_output = 'EPSG:5070'
-    output_filename = f"fires_{aoi_name}_FIRED_buffered_hull.gpkg"
+    output_filename = f"{aoi_name}_FIRED_fires_{date_range}_buffered.gpkg"
     
     print(f"Processing {len(fires_aoi)} fire perimeters.")
     print(f"Buffering perimeters by {buffer_dist/1000} km...")
@@ -383,7 +395,14 @@ def main():
     afds_ll = afds_ll[afds_ll.geometry.within(bounds)]
     print(f"[{len(afds_ll)}({round(len(afds_ll)/len(afds)*100,2)}%)] detections in {aoi_name}.")
     
-    output_filename = f'viirs_snpp_jpss1_afdFIRED_latlon_{aoi_name}.gpkg'
+    # Detect AFD date range for naming
+    afds_ll['acq_date'] = pd.to_datetime(afds_ll['acq_date'])
+    afd_min_year = int(afds_ll['acq_date'].dt.year.min())
+    afd_max_year = int(afds_ll['acq_date'].dt.year.max())
+    afd_date_range = f"{afd_min_year}-{afd_max_year}"
+    print(f"AFD data spans: {afd_date_range}")
+    
+    output_filename = f'{aoi_name}_FIRED_viirs_{afd_date_range}_points.gpkg'
     out_fp = os.path.join(dataAFD, output_filename)
     afds_ll.to_file(out_fp)
     print(f"Saved spatial points to: {out_fp}")
@@ -405,8 +424,7 @@ def main():
     duplicates = afds_ll_fires[afds_ll_fires.duplicated(subset='afdID', keep=False)]
     print(f"Resolving [{len(duplicates)}/{len(afds_ll_fires)}] duplicate obs.")
     
-    # Temporal filtering
-    afds_ll_fires['acq_date'] = pd.to_datetime(afds_ll_fires['acq_date'])
+    # Temporal filtering (acq_date already converted to datetime above)
     afds_ll_fires['acq_month'] = afds_ll_fires['acq_date'].dt.month.astype(int)
     afds_ll_fires['acq_year'] = afds_ll_fires['acq_date'].dt.year.astype(int)
     
@@ -447,7 +465,12 @@ def main():
     afds_fires = afds_ll_fires[afds_ll_fires['count'] >= n_obs]
     print(f"There are {len(afds_fires['merge_id'].unique())} fires with >= {n_obs} obs.")
     
-    output_filename = f'viirs_snpp_jpss1_afd_latlon_FIRED_{aoi_name}_fires.gpkg'
+    # Update date range after filtering
+    filtered_min_year = int(afds_fires['acq_year'].min())
+    filtered_max_year = int(afds_fires['acq_year'].max())
+    filtered_date_range = f"{filtered_min_year}-{filtered_max_year}"
+    
+    output_filename = f'{aoi_name}_FIRED_viirs_{filtered_date_range}_fires.gpkg'
     out_fp = os.path.join(dataAFD, output_filename)
     afds_fires.to_file(out_fp)
     print(f"Saved spatial points to: {out_fp}")
@@ -475,7 +498,7 @@ def main():
     afds_pix['obs_id'] = afds_pix.index
     print(f"Total detections: {len(afds_pix)}")
     
-    output_filename = f'viirs_snpp_jpss1_afd_latlon_firesFIRED_{aoi_name}_pixar.gpkg'
+    output_filename = f'{aoi_name}_FIRED_viirs_{filtered_date_range}_pixels.gpkg'
     out_fp = os.path.join(dataAFD, output_filename)
     afds_pix.to_file(out_fp)
     print(f"Saved to {out_fp}")
@@ -561,13 +584,13 @@ def main():
     fires_subset = fires_aoi[fires_aoi['merge_id'].isin(afds_pix['merge_id'].unique())]
     grid = regular_grid_parallel(extent, res=375, crs_out='EPSG:5070', regions=fires_subset)
     
-    output_filename = f'aoi_fire_{aoi_name}_FIRED_census_reggrid_375m.gpkg'
+    output_filename = f'{aoi_name}_FIRED_grid_{date_range}_375m.gpkg'
     out_fp = os.path.join(dataFires, output_filename)
     grid.to_file(out_fp, driver="GPKG")
     print(f"Grid saved to: {out_fp}")
     
     # Also save the subset of fires used for grid analysis
-    output_filename = f'aoi_fire_{aoi_name}_FIRED_census_2000_to_2024_subset.gpkg'
+    output_filename = f'{aoi_name}_FIRED_fires_{date_range}_subset.gpkg'
     out_fp = os.path.join(dataFires, output_filename)
     fires_subset.to_file(out_fp)
     print(f"Fire subset saved to: {out_fp}")
@@ -672,7 +695,7 @@ def main():
     # =============================================================================
     
     # Save the sophisticated gridstats file
-    output_filename = f'viirs_snpp_jpss1_afd_latlon_firesFIRED_{aoi_name}_pixar_gridstats.gpkg'
+    output_filename = f'{aoi_name}_FIRED_gridstats_{filtered_date_range}_final.gpkg'
     final_output_path = os.path.join(dataAFD, output_filename)
     
     if len(fire_grids_combined) > 0:
@@ -684,13 +707,15 @@ def main():
     print(f"\n" + "="*50)
     print(f"FRP Analysis Workflow Complete for {aoi_name}!")
     print(f"="*50)
-    print(f"\nKey outputs with {aoi_name}-specific naming:")
-    print(f"  - Fire perimeters: fires_{aoi_name}_FIRED.gpkg")
-    print(f"  - Buffered hulls: fires_{aoi_name}_FIRED_buffered_hull.gpkg")
-    print(f"  - AFD points: viirs_snpp_jpss1_afdFIRED_latlon_{aoi_name}.gpkg")
-    print(f"  - AFD pixels: viirs_snpp_jpss1_afd_latlon_firesFIRED_{aoi_name}_pixar.gpkg")
-    print(f"  - Grid: aoi_fire_{aoi_name}_FIRED_census_reggrid_375m.gpkg")
-    print(f"  - **MAIN OUTPUT** Sophisticated FRP gridstats: viirs_snpp_jpss1_afd_latlon_firesFIRED_{aoi_name}_pixar_gridstats.gpkg")
+    print(f"\nKey outputs with improved naming scheme:")
+    print(f"  - Fire perimeters: {aoi_name}_FIRED_fires_{date_range}_filtered.gpkg")
+    print(f"  - Buffered hulls: {aoi_name}_FIRED_fires_{date_range}_buffered.gpkg")
+    print(f"  - AFD points: {aoi_name}_FIRED_viirs_{afd_date_range}_points.gpkg")
+    print(f"  - AFD fires: {aoi_name}_FIRED_viirs_{filtered_date_range}_fires.gpkg")
+    print(f"  - AFD pixels: {aoi_name}_FIRED_viirs_{filtered_date_range}_pixels.gpkg")
+    print(f"  - Grid: {aoi_name}_FIRED_grid_{date_range}_375m.gpkg")
+    print(f"  - Fire subset: {aoi_name}_FIRED_fires_{date_range}_subset.gpkg")
+    print(f"  - **MAIN OUTPUT** FRP gridstats: {aoi_name}_FIRED_gridstats_{filtered_date_range}_final.gpkg")
     print(f"\nThe gridstats file contains sophisticated FRP statistics including:")
     print(f"  - frp_csum: Cumulative FRP per grid cell")
     print(f"  - frp_p90, frp_p95, frp_p97, frp_p99: FRP percentiles")

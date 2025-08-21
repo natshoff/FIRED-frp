@@ -10,7 +10,7 @@ This workflow combines VIIRS (Visible Infrared Imaging Radiometer Suite) active 
 
 - **Multi-scale Analysis**: Spatial aggregation from 375m pixels to ecoregion-level statistics
 - **Temporal Pattern Detection**: Monthly, seasonal, and interannual trend analysis
-- **Sophisticated FRP Metrics**: Cumulative FRP, percentiles (90th, 95th, 97th, 99th), day/night breakdowns
+- **FRP Metrics**: Cumulative FRP, percentiles (90th, 95th, 97th, 99th), day/night breakdowns
 - **Parallel Processing**: Optimized for large-scale datasets with configurable parallelization
 - **Ecosystem Analysis**: Ecoregion-specific fire behavior characterization
 
@@ -20,7 +20,7 @@ This workflow combines VIIRS (Visible Infrared Imaging Radiometer Suite) active 
 FIRED-frp/
 ├── code/
 │   ├── frp_FIRED_v3.py           # Main workflow script
-│   ├── frp_data_exp_v1.ipynb     # Comprehensive data exploration notebook
+│   ├── frp_data_exp_v1.ipynb     # Data exploration notebook
 │   ├── __functions.py            # Helper functions
 │   └── deprecated/               # Previous versions
 ├── data/
@@ -84,15 +84,30 @@ The Jupyter notebook (`frp_data_exp_v1.ipynb`) provides:
 
 ### Primary Data Products
 
-1. **Gridstats File**: `viirs_snpp_jpss1_afd_latlon_firesFIRED_{aoi}_pixar_gridstats.gpkg`
-   - 375m resolution grid cells with FRP statistics
+The workflow uses an improved naming scheme: `{aoi}_{fire_dataset}_{data_type}_{date_range}_{processing_step}.{ext}`
+
+1. **Main FRP Gridstats File**: `{aoi}_FIRED_gridstats_{date_range}_final.gpkg`
+   - 375m resolution grid cells with comprehensive FRP statistics
    - Cumulative FRP (frp_csum) in W/km²
    - Percentile metrics (P90, P95, P97, P99)
    - Day/night breakdowns
    - Temporal metrics (duration, peak dates)
+   - Example: `westUS_FIRED_gridstats_2012-2024_final.gpkg`
 
-2. **Processed Fire Perimeters**: Buffered and filtered fire boundaries
-3. **Active Fire Pixels**: VIIRS detections as pixel areas with FRP/area calculations
+2. **Fire Perimeter Products**:
+   - **Filtered perimeters**: `{aoi}_FIRED_fires_{date_range}_filtered.gpkg`
+   - **Buffered hulls**: `{aoi}_FIRED_fires_{date_range}_buffered.gpkg`
+   - **Analysis grid**: `{aoi}_FIRED_grid_{date_range}_375m.gpkg`
+
+3. **VIIRS Active Fire Products**:
+   - **Point detections**: `{aoi}_FIRED_viirs_{date_range}_points.gpkg` 
+   - **Pixel areas**: `{aoi}_FIRED_viirs_{date_range}_pixels.gpkg`
+   - **Fire-filtered**: `{aoi}_FIRED_viirs_{date_range}_fires.gpkg`
+
+### Naming Examples
+- Western US analysis: `westUS_FIRED_gridstats_2012-2024_final.gpkg`
+- Southern Rockies: `srm_FIRED_gridstats_2012-2024_final.gpkg`
+- California subset: `california_FIRED_gridstats_2015-2023_final.gpkg`
 
 ## Configuration Options
 
